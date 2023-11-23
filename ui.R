@@ -1,7 +1,7 @@
 library(shiny)
 
 # Define UI for Bayesfactor
-shinyUI(fluidPage(withMathJax(), useShinyjs(),
+shinyUI(fluidPage(withMathJax(),
                   theme = "bootstrap.css",
 
                   title = "Fit-a-normal!",

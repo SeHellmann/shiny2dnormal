@@ -1,0 +1,12 @@
+name: shiny2dnormal
+title: shiny2dnormal
+username: sehellmann
+account: sehellmann
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10611333
+bundleId: 7961664
+url: https://sehellmann.shinyapps.io/shiny2dnormal/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
