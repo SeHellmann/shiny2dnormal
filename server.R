@@ -4,8 +4,9 @@ library(ggplot2)
 require(gridExtra)
 # construct a new environment for global data sharing
 dat <- new.env()
-
+#input=list(sigma1 = 1, sigma2=1, mu1=0,mu2=0, rho=0)
 reset_values <- function() {
+  dat$i <- 0
   dat$mus <- runif(2, -1.5, 1.5)
   dat$sigmas <- runif(2, 0.3, 1.5)
   dat$rho <- runif(1, -0.9, 0.9)
@@ -34,9 +35,13 @@ minimize_loglik <- function(X) {
     Sigma <- matrix(c(exp(X[3])^2, exp(X[3])*exp(X[4])*((pnorm(X[5])-0.5)*2),
                       exp(X[3])*exp(X[4])*((pnorm(X[5])-0.5)*2),exp(X[4])^2), nrow=2)
     loglik.optim <- -sum(log(mvtnorm::dmvnorm(dat$sim, mean = c(X[1],X[2]), sigma = Sigma)))
-
-  # save parameter set for intermediate results
-  dat$optim.pars <- rbind(dat$optim.pars, c(X, loglik.optim))
+  dat$i <- dat$i +1
+  if (dat$i %% 5 ==0 ) {
+    # save parameter set for intermediate results
+    dat$optim.pars <- rbind(dat$optim.pars,
+                            c(c(X[1], X[2], exp(X[3]), exp(X[4]), (pnorm(X[5])-0.5)*2),
+                              loglik.optim))
+  }
   #if (is.infinite(loglik.optim)) loglik.optim <- 1e+12
   return(loglik.optim)
 }
@@ -126,9 +131,10 @@ shinyServer(function(input, output, session) {
 
     XLIM <- c(1, max(10, length(dat$loglik.manual), nrow(dat$optim.pars.plot)))
     if (nrow(dat$optim.pars.plot) > 0) {
-      YLIM <- c(dat$loglik_opt*0.9, max(c(dat$loglik.manual, dat$optim.pars.plot[ ,6]))*1.2)
+      YLIM <- c(dat$loglik_opt*0.9,
+                max(c(dat$loglik.manual, dat$optim.pars.plot[ ,6])[!is.infinite(c(dat$loglik.manual, dat$optim.pars.plot[ ,6]))])*1.2)
     } else {
-      YLIM <- c(dat$loglik_opt*0.9, max(dat$loglik.manual)*1.2)
+      YLIM <- c(dat$loglik_opt*0.9, max(dat$loglik.manual[!is.infinite(dat$loglik.manual)])*1.2)
     }
 
     # ---------------------------------------------------------------------
@@ -160,8 +166,8 @@ shinyServer(function(input, output, session) {
       reset_values()
       updateSliderInput(session, "mu1", value = 0)
       updateSliderInput(session, "mu2", value = 0)
-      updateSliderInput(session, "sigma1", value = 0)
-      updateSliderInput(session, "sigma2", value = 0)
+      updateSliderInput(session, "sigma1", value = 1.5)
+      updateSliderInput(session, "sigma2", value = 1.5)
       updateSliderInput(session, "rho", value = 0)
       invalidateLater(1, session)
     })
@@ -178,11 +184,13 @@ shinyServer(function(input, output, session) {
       dat$optim.pars.plot <- data.frame()
 
       # optimize parameters. Reduce relative tolerance (otherwise the optimizer stays quite long around the final line)
-      # result <- optim(par = c(mean(dat$sim[,1]), mean(dat$sim[,2]), log(sd(dat$sim[,1])), log(sd(dat$sim[,2])), qnorm(cor(dat$sim[,1], dat$sim[,2])/2+0.5))+
-      #                   rnorm(5, 0, 0.3),
-      #                 min_function, control=list(reltol=.002))
-      result <- minqa::bobyqa(par = c(0, 0, 0.8, 0.8, 0), min_function2,
-                      lower = c(-3, -3, 0, 0 ,-1), upper=c(5, 5, 5, 5, 1))
+      result <- optim(par = c(mean(dat$sim[,1]), mean(dat$sim[,2]), log(sd(dat$sim[,1])), log(sd(dat$sim[,2])), qnorm(cor(dat$sim[,1], dat$sim[,2])/2+0.5))+
+                        rnorm(5, 0, 0.3),
+                      min_function, control=list(reltol=.002, maxit=200))
+      result$par <- with(result, c(par[1], par[2], exp(par[3]), exp(par[4]), (pnorm(par[5]))-0.5)*2)
+      # result <- minqa::bobyqa(par = c(0, 0, 0.8, 0.8, 0), min_function2,
+      #                 lower = c(-3, -3, 0, 0 ,-1), upper=c(5, 5, 5, 5, 1),
+      #                 control = list(rhobeg=1,rhoend=0.0001, maxfun=300))
 
       # show the sequence of optimization steps
       invalidateLater(1, session)

@@ -5,7 +5,7 @@ account: sehellmann
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10611333
-bundleId: 7961664
+bundleId: 7983222
 url: https://sehellmann.shinyapps.io/shiny2dnormal/
 version: 1
 asMultiple: FALSE
